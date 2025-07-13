@@ -105,7 +105,7 @@ func DeleteDocByName(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-func GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
+func GenerateAPIKey(w http.ResponseWriter, _ *http.Request) {
 	key, err := db.GenerateAPIKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
