@@ -43,6 +43,7 @@ func CreateDoc(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(doc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to create document - " + error.Error(err))
 		return
 	}
 	fmt.Println("Doc Created")
@@ -60,6 +61,8 @@ func AddValueToDoc(w http.ResponseWriter, r *http.Request) {
 	err := db.AddValueToDoc(apiKey, id, collection, vName, value)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to add value to document - " + error.Error(err))
+		return
 	}
 	fmt.Println("Doc Modified - Added Value")
 }
@@ -75,6 +78,8 @@ func RemoveValueFromDoc(w http.ResponseWriter, r *http.Request) {
 	err := db.RemoveValueFromDoc(apiKey, id, collection, vName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to remove value from document - " + error.Error(err))
+		return
 	}
 	fmt.Println("Doc Modified - Removed Value")
 }
@@ -91,10 +96,13 @@ func GetDocByID(w http.ResponseWriter, r *http.Request) {
 	doc, err := db.ReadDocByID(apiKey, id, collection)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to fetch document - " + error.Error(err))
+		return
 	}
 	err = json.NewEncoder(w).Encode(doc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to fetch document - " + error.Error(err))
 		return
 	}
 	fmt.Println("Doc Fetched By ID")
@@ -108,11 +116,14 @@ func GetDocs(w http.ResponseWriter, r *http.Request) {
 	}
 	docs, err := db.ReadAllDocs(apiKey, collection)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to fetch documents - " + error.Error(err))
 		return
 	}
 	err = json.NewEncoder(w).Encode(docs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to fetch documents - " + error.Error(err))
 		return
 	}
 	fmt.Println("All Docs Fetched")
@@ -130,6 +141,8 @@ func DeleteDocByID(w http.ResponseWriter, r *http.Request) {
 	err := db.DeleteDocByID(apiKey, id, collection)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to delete document - " + error.Error(err))
+		return
 	}
 	fmt.Println("Doc Deleted")
 }
@@ -138,12 +151,14 @@ func GenerateAPIKey(w http.ResponseWriter, _ *http.Request) {
 	key, err := db.GenerateAPIKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to generate API key - " + error.Error(err))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(key))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Failed to generate API key - " + error.Error(err))
 		return
 	}
 	fmt.Println("API Key Generated")

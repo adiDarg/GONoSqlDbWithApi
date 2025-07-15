@@ -34,7 +34,7 @@ func (securedDB *SecuredDB) CreateDoc(apiKey string, name string, collection str
 		return Doc.Document{}, err
 	}
 	err = securedDB.insertDoc(apiKey, doc, collection)
-	return doc, err
+	return securedDB.ReadDocByID(apiKey, doc.Id, collection)
 }
 func (securedDB *SecuredDB) AddValueToDoc(apiKey string, id string, collection string, vName string, value string) error {
 	doc, err := securedDB.ReadDocByID(apiKey, id, collection)
