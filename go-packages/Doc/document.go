@@ -21,6 +21,9 @@ func (doc *Document) GetValue() (string, error) {
 func (doc *Document) AddValue(name string, value string) {
 	doc.Values[name] = value
 }
+func (doc *Document) RemoveValue(name string) {
+	delete(doc.Values, name)
+}
 func (doc *Document) GetKeys() []string {
 	keys := make([]string, len(doc.Values))
 	i := 0

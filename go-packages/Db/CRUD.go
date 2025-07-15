@@ -28,20 +28,49 @@ func generatePath(apiKey string, collection string, securedDB *SecuredDB) string
 	return baseDir + "/" + securedDB.keyToPath[apiKey] + "/" + collection + "/"
 }
 
-func (securedDB *SecuredDB) InsertDoc(apiKey string, document Doc.Document, collection string) error {
+func (securedDB *SecuredDB) CreateDoc(apiKey string, name string, collection string) (Doc.Document, error) {
+	doc, err := Doc.InitDoc(name)
+	if err != nil {
+		return Doc.Document{}, err
+	}
+	err = securedDB.insertDoc(apiKey, doc, collection)
+	return doc, err
+}
+func (securedDB *SecuredDB) AddValueToDoc(apiKey string, id string, collection string, vName string, value string) error {
+	doc, err := securedDB.ReadDocByID(apiKey, id, collection)
+	if err != nil {
+		return err
+	}
+	doc.AddValue(vName, value)
+	return securedDB.insertDoc(apiKey, doc, collection)
+}
+func (securedDB *SecuredDB) RemoveValueFromDoc(apiKey string, id string, collection string, vName string) error {
+	doc, err := securedDB.ReadDocByID(apiKey, id, collection)
+	if err != nil {
+		return err
+	}
+	doc.RemoveValue(vName)
+	return securedDB.insertDoc(apiKey, doc, collection)
+}
+func (securedDB *SecuredDB) insertDoc(apiKey string, document Doc.Document, collection string) error {
 	dirPath := generatePath(apiKey, collection, securedDB)
 	err := os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		return err
 	}
-	dupe, err := securedDB.ReadDocByName(apiKey, document.Name, collection)
+
+	docs, err := securedDB.ReadAllDocs(apiKey, collection)
 	if err != nil {
 		if err.Error() != docNotFoundError {
 			return err
 		}
-	} else {
-		document.Id = dupe.Id
 	}
+	for _, dupe := range docs {
+		if dupe.Name == document.Name {
+			document.Id = dupe.Id
+		}
+	}
+
 	jsonData, err := json.Marshal(document)
 	err = os.WriteFile(dirPath+document.Id+".json", jsonData, 0644)
 	return err
@@ -61,46 +90,26 @@ func (securedDB *SecuredDB) ReadDocByID(apiKey string, id string, collection str
 	}
 	return doc, nil
 }
-func (securedDB *SecuredDB) ReadDocByName(apiKey string, name string, collection string) (Doc.Document, error) {
+func (securedDB *SecuredDB) ReadAllDocs(apiKey string, collection string) ([]Doc.Document, error) {
 	dirPath := generatePath(apiKey, collection, securedDB)
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
-		return Doc.Document{}, err
+		return make([]Doc.Document, 0), err
 	}
+	documents := make([]Doc.Document, 0)
 	for _, file := range files {
 		nameWithoutExt := strings.TrimSuffix(file.Name(), ".json")
 		doc, err := securedDB.ReadDocByID(apiKey, nameWithoutExt, collection)
 		if err != nil {
-			return Doc.Document{}, err
+			return documents, err
 		}
-		if doc.Name == name {
-			return doc, nil
-		}
+		documents = append(documents, doc)
 	}
-	return Doc.Document{}, errors.New(docNotFoundError)
+	return documents, nil
 }
 func (securedDB *SecuredDB) DeleteDocByID(apiKey string, id string, collection string) error {
 	dirPath := generatePath(apiKey, collection, securedDB)
 	err := os.Remove(dirPath + id + ".json")
-	return err
-}
-func (securedDB *SecuredDB) DeleteDocByName(apiKey string, name string, collection string) error {
-	dirPath := generatePath(apiKey, collection, securedDB)
-	files, err := os.ReadDir(dirPath)
-	if err != nil {
-		return err
-	}
-	for _, file := range files {
-		nameWithoutExt := strings.TrimSuffix(file.Name(), ".json")
-		doc, err := securedDB.ReadDocByID(apiKey, nameWithoutExt, collection)
-		if err != nil {
-			return err
-		}
-		if doc.Name == name {
-			err = os.Remove(dirPath + doc.Id + ".json")
-			break
-		}
-	}
 	return err
 }
 func (securedDB *SecuredDB) GenerateAPIKey() (string, error) {

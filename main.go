@@ -7,13 +7,13 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/SetDoc", API.SetDoc)
+	http.HandleFunc("/CreateDoc", API.CreateDoc)
+	http.HandleFunc("/AddValueToDoc", API.AddValueToDoc)
+	http.HandleFunc("/RemoveValueFromDoc", API.RemoveValueFromDoc)
+	http.HandleFunc("/GetDocs", API.GetDocs)
 	http.HandleFunc("/GetDocByID", API.GetDocByID)
-	http.HandleFunc("/GetDocByName", API.GetDocByName)
 	http.HandleFunc("/DeleteDocByID", API.DeleteDocByID)
-	http.HandleFunc("/DeleteDocByName", API.DeleteDocByName)
 	http.HandleFunc("/GenerateAPIKey", API.GenerateAPIKey)
-
 	addr := ":4410"
 	log.Printf("Starting server at %s\n", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {

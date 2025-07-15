@@ -2,8 +2,8 @@ package API
 
 import (
 	"customDatabase/go-packages/Db"
-	"customDatabase/go-packages/Doc"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -12,37 +12,77 @@ var db = Db.CreateDB()
 func handleBadRequest(parameters []string, w *http.ResponseWriter) bool {
 	for _, value := range parameters {
 		if value == "" {
+			fmt.Println("Bad Request")
 			http.Error(*w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return true
 		}
 	}
 	return false
 }
+func allowCrossOriginRequest(wPointer *http.ResponseWriter) {
+	w := *wPointer
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+}
 
-func SetDoc(w http.ResponseWriter, r *http.Request) {
+func CreateDoc(w http.ResponseWriter, r *http.Request) {
+	allowCrossOriginRequest(&w)
 	apiKey := r.URL.Query().Get("apiKey")
+	name := r.URL.Query().Get("name")
 	collection := r.URL.Query().Get("collection")
-
-	if handleBadRequest([]string{apiKey, collection}, &w) {
+	if handleBadRequest([]string{apiKey, name, collection}, &w) {
 		return
 	}
 
-	var document Doc.Document
-	err := json.NewDecoder(r.Body).Decode(&document)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = db.InsertDoc(apiKey, document, collection)
+	doc, err := db.CreateDoc(apiKey, name, collection)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	err = json.NewEncoder(w).Encode(doc)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("Doc Created")
 }
-func GetDocByID(w http.ResponseWriter, r *http.Request) {
+func AddValueToDoc(w http.ResponseWriter, r *http.Request) {
+	allowCrossOriginRequest(&w)
 	apiKey := r.URL.Query().Get("apiKey")
 	collection := r.URL.Query().Get("collection")
-	id := r.URL.Query().Get("documentId")
+	id := r.URL.Query().Get("id")
+	vName := r.URL.Query().Get("valueName")
+	value := r.URL.Query().Get("value")
+	if handleBadRequest([]string{apiKey, collection, id, vName, value}, &w) {
+		return
+	}
+	err := db.AddValueToDoc(apiKey, id, collection, vName, value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Doc Modified - Added Value")
+}
+func RemoveValueFromDoc(w http.ResponseWriter, r *http.Request) {
+	allowCrossOriginRequest(&w)
+	apiKey := r.URL.Query().Get("apiKey")
+	collection := r.URL.Query().Get("collection")
+	id := r.URL.Query().Get("id")
+	vName := r.URL.Query().Get("valueName")
+	if handleBadRequest([]string{apiKey, collection, id, vName}, &w) {
+		return
+	}
+	err := db.RemoveValueFromDoc(apiKey, id, collection, vName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Doc Modified - Removed Value")
+}
+func GetDocByID(w http.ResponseWriter, r *http.Request) {
+	allowCrossOriginRequest(&w)
+	apiKey := r.URL.Query().Get("apiKey")
+	collection := r.URL.Query().Get("collection")
+	id := r.URL.Query().Get("id")
 
 	if handleBadRequest([]string{apiKey, collection, id}, &w) {
 		return
@@ -57,30 +97,31 @@ func GetDocByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("Doc Fetched By ID")
 }
-func GetDocByName(w http.ResponseWriter, r *http.Request) {
+func GetDocs(w http.ResponseWriter, r *http.Request) {
+	allowCrossOriginRequest(&w)
 	apiKey := r.URL.Query().Get("apiKey")
 	collection := r.URL.Query().Get("collection")
-	name := r.URL.Query().Get("name")
-
-	if handleBadRequest([]string{apiKey, collection, name}, &w) {
+	if handleBadRequest([]string{apiKey, collection}, &w) {
 		return
 	}
-
-	doc, err := db.ReadDocByName(apiKey, name, collection)
+	docs, err := db.ReadAllDocs(apiKey, collection)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	err = json.NewEncoder(w).Encode(doc)
+	err = json.NewEncoder(w).Encode(docs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("All Docs Fetched")
 }
 func DeleteDocByID(w http.ResponseWriter, r *http.Request) {
+	allowCrossOriginRequest(&w)
 	apiKey := r.URL.Query().Get("apiKey")
 	collection := r.URL.Query().Get("collection")
-	id := r.URL.Query().Get("documentId")
+	id := r.URL.Query().Get("id")
 
 	if handleBadRequest([]string{apiKey, collection, id}, &w) {
 		return
@@ -90,22 +131,10 @@ func DeleteDocByID(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-func DeleteDocByName(w http.ResponseWriter, r *http.Request) {
-	apiKey := r.URL.Query().Get("apiKey")
-	collection := r.URL.Query().Get("collection")
-	name := r.URL.Query().Get("name")
-
-	if handleBadRequest([]string{apiKey, collection, name}, &w) {
-		return
-	}
-
-	err := db.DeleteDocByID(apiKey, name, collection)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	fmt.Println("Doc Deleted")
 }
 func GenerateAPIKey(w http.ResponseWriter, _ *http.Request) {
+	allowCrossOriginRequest(&w)
 	key, err := db.GenerateAPIKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -117,4 +146,5 @@ func GenerateAPIKey(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("API Key Generated")
 }
